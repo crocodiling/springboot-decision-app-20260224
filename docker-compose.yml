@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: bbs_db
+    environment:
+      MYSQL_DATABASE: bbs
+      MYSQL_USER: bbs_user
+      MYSQL_PASSWORD: bbs_pass
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Tokyo
+    ports:
+      - "3307:3307"
+    volumes:
+      - db_data:/var/lib/mysql
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    image: maven:3.9.9-eclipse-temurin-21
+    container_name: bbs_app
+    working_dir: /workspace
+    volumes:
+      - ./web:/workspace
+      - m2_cache:/root/.m2
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      db:
+        condition: service_healthy
+    command: mvn -q spring-boot:run
+
+  adminer:
+    image: adminer:4
+    container_name: bbs_adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      - db
+
+volumes:
+  db_data:
+  m2_cache:
